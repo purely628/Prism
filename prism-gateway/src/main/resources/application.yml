@@ -1,0 +1,62 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: prism-gateway
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  data:
+    redis:
+      host: ${PRISM_REDIS_HOST:127.0.0.1}
+      port: ${PRISM_REDIS_PORT:6379}
+  cloud:
+    nacos:
+      discovery:
+        # local：直连路由，不上 nacos；compose profile 打开
+        enabled: false
+    gateway:
+      httpclient:
+        connect-timeout: 5000
+        # SSE 流式响应可能持续数分钟，放大整体响应超时
+        response-timeout: 300s
+      # CORS 全局配置：Vite dev(5173) 跨域直连网关
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+      routes:
+        - id: user-service
+          uri: http://127.0.0.1:8101
+          predicates:
+            - Path=/api/auth/**,/api/apps/**,/api/channels/**
+        - id: chat-service
+          uri: http://127.0.0.1:8102
+          predicates:
+            - Path=/v1/**
+        - id: billing-service
+          uri: http://127.0.0.1:8103
+          predicates:
+            - Path=/api/usage/**,/api/bills/**
+        - id: kb-service
+          uri: http://127.0.0.1:8104
+          predicates:
+            - Path=/api/kb/**
+        - id: agent-service
+          uri: http://127.0.0.1:8200
+          predicates:
+            - Path=/api/agent/**
+
+prism:
+  jwt:
+    secret: ${PRISM_JWT_SECRET:prism-jwt-secret-please-change-in-prod-0123456789}
+  # 用户服务直连地址（/internal/apps/bykey 回源用；compose 下走内网 DNS）
+  user-url: ${PRISM_USER_URL:http://127.0.0.1:8101}
+
+logging:
+  level:
+    com.prism.gateway: info

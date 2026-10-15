@@ -1,0 +1,78 @@
+server:
+  port: 8103
+  shutdown: graceful
+
+spring:
+  application:
+    name: prism-billing
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  lifecycle:
+    timeout-per-shutdown-phase: 15s
+  jackson:
+    default-property-inclusion: non_null
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+
+prism:
+  # MQ 双实现：stream（默认，Redis Stream）/ rabbit（compose 环境）
+  mq:
+    mode: ${MQ_MODE:stream}
+  worker-id: 4
+  billing:
+    # 攒批：满 batch-size 条 或 每 flush-interval-ms 毫秒 批量落库
+    batch-size: 500
+    flush-interval-ms: 2000
+    stream-key: prism:stream:usage
+    group: billing
+    consumer-name: billing-1
+    # 启动时认领 pending 中 idle 超过该分钟数的消息（简单故障恢复）
+    claim-idle-minutes: 5
+    # 幂等键 TTL（契约 48h）
+    idem-ttl-days: 2
+    # 配额计数器过期天数
+    quota-expire-days: 40
+  jwt:
+    secret: ${PRISM_JWT_SECRET:prism-jwt-secret-please-change-in-prod-0123456789}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/prism?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&connectTimeout=5000&socketTimeout=60000&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: 1234
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      timeout: 10s
+  rabbitmq:
+    host: 127.0.0.1
+    port: 5672
+
+---
+spring:
+  config:
+    activate:
+      on-profile: compose
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:mysql}:3306/prism?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:1234}
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: 6379
+      timeout: 10s
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: 5672

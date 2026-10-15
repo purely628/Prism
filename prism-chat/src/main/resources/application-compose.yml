@@ -1,0 +1,30 @@
+# compose profile：MySQL/Redis/Rabbit/Nacos 地址全部环境变量化（deploy/docker-compose.yml 注入）
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${MYSQL_URL:jdbc:mysql://mysql:3306/prism?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:1234}
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+  # prism.mq.mode=rabbit 时才真正用到（连接惰性建立）
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+  cloud:
+    nacos:
+      discovery:
+        # compose：注册到 nacos，供网关 lb://prism-chat 路由
+        enabled: true
+        server-addr: ${NACOS_SERVER_ADDR:nacos:8848}
+
+prism:
+  worker-id: ${PRISM_WORKER_ID:3}
+  mq:
+    mode: ${MQ_MODE:rabbit}
+  embed:
+    remote-url: ${PRISM_EMBED_URL:}

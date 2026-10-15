@@ -1,0 +1,30 @@
+# compose profile：Nacos 注册发现 + lb:// 路由（Java 服务）；
+# agent 为 Python 服务不注册 nacos，按容器服务名直连。
+spring:
+  cloud:
+    nacos:
+      discovery:
+        enabled: true
+        server-addr: ${NACOS_SERVER_ADDR:nacos:8848}
+    gateway:
+      routes:
+        - id: user-service
+          uri: lb://prism-user
+          predicates:
+            - Path=/api/auth/**,/api/apps/**,/api/channels/**
+        - id: chat-service
+          uri: lb://prism-chat
+          predicates:
+            - Path=/v1/**
+        - id: billing-service
+          uri: lb://prism-billing
+          predicates:
+            - Path=/api/usage/**,/api/bills/**
+        - id: kb-service
+          uri: lb://prism-kb
+          predicates:
+            - Path=/api/kb/**
+        - id: agent-service
+          uri: ${PRISM_AGENT_URL:http://agent-service:8200}
+          predicates:
+            - Path=/api/agent/**

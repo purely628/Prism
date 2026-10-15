@@ -1,0 +1,12 @@
+# 统一的 Java 服务镜像：build context 必须是仓库根
+# docker build -f deploy/Dockerfile.service --build-arg JAR_FILE=prism-chat/target/prism-chat-1.0.0.jar -t prism/chat .
+FROM eclipse-temurin:17-jre
+
+ARG JAR_FILE
+COPY ${JAR_FILE} /app/app.jar
+
+RUN useradd -m appuser
+USER appuser
+
+EXPOSE 8080
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "/app/app.jar"]

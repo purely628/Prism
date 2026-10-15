@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.prism.billing.mapper.UsageRecordMapper">
+
+    <!-- 攒批多行 INSERT：单语句批量，比逐条 insert 快一个数量级；
+         极端场景（消息重复投递且 Redis 幂等键已过期）撞 uk_msg_id 时由上层降级逐条插入 -->
+    <insert id="insertBatch">
+        INSERT INTO t_usage_record
+            (id, msg_id, app_id, model, channel_id, prompt_tokens, completion_tokens,
+             total_tokens, latency_ms, cache_hit, created_at)
+        VALUES
+        <foreach collection="records" item="r" separator=",">
+            (#{r.id}, #{r.msgId}, #{r.appId}, #{r.model}, #{r.channelId}, #{r.promptTokens},
+             #{r.completionTokens}, #{r.totalTokens}, #{r.latencyMs}, #{r.cacheHit}, #{r.createdAt})
+        </foreach>
+    </insert>
+</mapper>

@@ -1,0 +1,32 @@
+# Prism agent-service 依赖（Python 3.12）
+# 离线可跑是硬要求：默认 hash embedding + MockLLM，不下载任何模型、不调外部 API。
+
+# ---- Web 框架 ----
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.32,<1.0
+pydantic>=2.9,<3
+pydantic-settings>=2.6,<3
+
+# ---- LangChain 0.3.x 生态 ----
+langchain>=0.3.14,<0.4
+langchain-core>=0.3.29,<0.4
+langchain-text-splitters>=0.3.6,<0.4
+langchain-community>=0.3.13,<0.4
+
+# ---- 向量库 / 文档解析 ----
+chromadb>=0.5.18,<0.6
+# chromadb 0.5.x 的遥测走 posthog 模块级 API；posthog>=4 移除该 API 导致每次
+# 操作打印 "Failed to send telemetry event"（虽未真正上报）。pin 3.x 可彻底关闭遥测。
+posthog>=3.5,<4
+numpy>=1.26,<3
+pypdf>=5.1,<6
+python-docx>=1.1,<2
+
+# ---- 基础设施客户端 ----
+httpx>=0.27,<1
+redis>=5.2,<6
+aio-pika>=9.4,<10
+
+# ---- 测试 ----
+pytest>=8.3,<9
+pytest-asyncio>=0.25,<0.26

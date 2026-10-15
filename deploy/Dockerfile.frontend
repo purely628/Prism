@@ -1,0 +1,12 @@
+# 前端两阶段构建：node build → nginx 托管（context 为仓库根）
+FROM node:20-alpine AS build
+WORKDIR /fe
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm install --registry=https://registry.npmmirror.com
+COPY frontend/ ./
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /fe/dist /usr/share/nginx/html
+COPY deploy/nginx/nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80

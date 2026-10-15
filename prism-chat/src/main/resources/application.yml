@@ -1,0 +1,44 @@
+server:
+  port: 8102
+
+spring:
+  application:
+    name: prism-chat
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${PRISM_MYSQL_HOST:127.0.0.1}:${PRISM_MYSQL_PORT:3306}/prism?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${PRISM_MYSQL_USER:root}
+    password: ${PRISM_MYSQL_PASSWORD:1234}
+  data:
+    redis:
+      host: ${PRISM_REDIS_HOST:127.0.0.1}
+      port: ${PRISM_REDIS_PORT:6379}
+  cloud:
+    nacos:
+      discovery:
+        # local：直连调试，不上 nacos；compose profile 打开
+        enabled: false
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+
+logging:
+  level:
+    com.prism.chat: info
+
+prism:
+  worker-id: ${PRISM_WORKER_ID:3}   # 雪花机器位（契约：chat=3）
+  mq:
+    mode: ${MQ_MODE:stream}         # stream=Redis Stream（local 默认，零外部 MQ 依赖） / rabbit=RabbitMQ（compose）
+  semantic-cache:
+    enabled: ${PRISM_SEMANTIC_CACHE_ENABLED:true}
+    threshold: ${PRISM_SEMANTIC_CACHE_THRESHOLD:0.92}
+  embed:
+    # 留空用本地哈希 embedding；可填 agent-service 地址（如 http://127.0.0.1:8200，POST {url}/embed）
+    remote-url: ${PRISM_EMBED_URL:}
+    timeout: 5s

@@ -1,0 +1,38 @@
+server:
+  port: 8101
+
+spring:
+  application:
+    name: prism-user
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${PRISM_MYSQL_HOST:127.0.0.1}:${PRISM_MYSQL_PORT:3306}/prism?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${PRISM_MYSQL_USER:root}
+    password: ${PRISM_MYSQL_PASSWORD:1234}
+  data:
+    redis:
+      host: ${PRISM_REDIS_HOST:127.0.0.1}
+      port: ${PRISM_REDIS_PORT:6379}
+  cloud:
+    nacos:
+      discovery:
+        # local：不上 nacos；compose profile 打开
+        enabled: false
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+
+prism:
+  jwt:
+    secret: ${PRISM_JWT_SECRET:prism-jwt-secret-please-change-in-prod-0123456789}
+  # 雪花机器位（user 服务固定 2，避免与 chat/billing 等实例冲突）
+  worker-id: ${PRISM_WORKER_ID:2}
+
+logging:
+  level:
+    com.prism.user: info

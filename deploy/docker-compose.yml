@@ -1,0 +1,177 @@
+name: prism
+
+# 完整生产拓扑：先在宿主机执行
+#   mvn clean package -DskipTests && (cd frontend && npm i && npm run build)
+# 再 docker compose -f deploy/docker-compose.yml up -d
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: "1234"
+    volumes:
+      - ../sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p1234"]
+      interval: 5s
+      retries: 12
+    networks: [prism]
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 12
+    networks: [prism]
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: prism
+      RABBITMQ_DEFAULT_PASS: prism123
+    ports:
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      retries: 12
+    networks: [prism]
+
+  nacos:
+    image: nacos/nacos-server:v2.3.2
+    environment:
+      MODE: standalone
+      NACOS_AUTH_ENABLE: "false"
+    ports:
+      - "8848:8848"
+    networks: [prism]
+
+  agent-service:
+    build:
+      context: ../agent-service
+    image: prism/agent-service
+    environment:
+      PRISM_KB_BASE: http://prism-kb:8104
+      MQ_MODE: rabbit
+      RABBIT_HOST: rabbitmq
+      RABBIT_USER: prism
+      RABBIT_PASS: prism123
+      REDIS_HOST: redis
+      PRISM_REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [prism]
+
+  prism-user:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.service
+      args: { JAR_FILE: prism-user/target/prism-user-1.0.0.jar }
+    image: prism/user
+    environment:
+      SPRING_PROFILES_ACTIVE: compose
+      MYSQL_HOST: mysql
+      REDIS_HOST: redis
+      MQ_MODE: rabbit
+      RABBIT_HOST: rabbitmq
+      PRISM_WORKER_ID: "2"
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [prism]
+
+  prism-gateway:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.service
+      args: { JAR_FILE: prism-gateway/target/prism-gateway-1.0.0.jar }
+    image: prism/gateway
+    environment:
+      SPRING_PROFILES_ACTIVE: compose
+      REDIS_HOST: redis
+    depends_on:
+      redis: { condition: service_healthy }
+    ports:
+      - "8080:8080"
+    networks: [prism]
+
+  prism-chat:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.service
+      args: { JAR_FILE: prism-chat/target/prism-chat-1.0.0.jar }
+    image: prism/chat
+    environment:
+      SPRING_PROFILES_ACTIVE: compose
+      PRISM_MYSQL_HOST: mysql
+      REDIS_HOST: redis
+      MQ_MODE: rabbit
+      RABBIT_HOST: rabbitmq
+      PRISM_WORKER_ID: "3"
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [prism]
+
+  prism-billing:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.service
+      args: { JAR_FILE: prism-billing/target/prism-billing-1.0.0.jar }
+    image: prism/billing
+    environment:
+      SPRING_PROFILES_ACTIVE: compose
+      MYSQL_HOST: mysql
+      REDIS_HOST: redis
+      MQ_MODE: rabbit
+      RABBIT_HOST: rabbitmq
+      PRISM_WORKER_ID: "4"
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [prism]
+
+  prism-kb:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.service
+      args: { JAR_FILE: prism-kb/target/prism-kb-1.0.0.jar }
+    image: prism/kb
+    environment:
+      SPRING_PROFILES_ACTIVE: compose
+      MYSQL_HOST: mysql
+      REDIS_HOST: redis
+      MQ_MODE: rabbit
+      RABBIT_HOST: rabbitmq
+      PRISM_WORKER_ID: "5"
+      PRISM_AGENT_URL: http://agent-service:8200
+      PRISM_KB_STORAGE: /data/kb
+    volumes:
+      - kb-data:/data/kb
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [prism]
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.frontend
+    image: prism/frontend
+    depends_on:
+      - prism-gateway
+    ports:
+      - "80:80"
+    networks: [prism]
+
+volumes:
+  mysql-data:
+  kb-data:
+
+networks:
+  prism:
+    driver: bridge

@@ -1,0 +1,9 @@
+spring:
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+
+prism:
+  agent-url: ${AGENT_URL:http://agent-service:8200}
+  kb:
+    storage: /data/kb
